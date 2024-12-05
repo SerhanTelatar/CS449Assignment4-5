@@ -28,7 +28,7 @@ state = STATE_MAIN_MENU
 # Define screen zones and labels
 zones_main_menu = [
     {"label": "Welcome", "coords": (50, 50)},
-    {"label": "Keyboard", "coords": (150, 50)},  # Keyboard button for Calculator
+    {"label": "Calculator", "coords": (150, 50)},  # Keyboard button for Calculator
     {"label": "Clock", "coords": (250, 50)},  # Clock button for Clock Screen
     {"label": "Music", "coords": (350, 50)},  # Music button for Music Screen
 ]
@@ -62,9 +62,10 @@ songs = [
 ]
 
 zones_music = [
-    {"label": "Back", "coords": (100, 400)},  # Back button to return to Main Menu
-    {"label": "Stop", "coords": (250, 400)},  # Stop button for music
-    {"label": "Rewind", "coords": (400, 400)},  # Rewind button for music
+    {"label": "Stop", "coords": (100, 400)},
+    {"label": "Rewind", "coords": (250, 400)},  # Rewind button
+    {"label": "Resume", "coords": (400, 400)},  # Resume button
+    {"label": "Back", "coords": (550, 400)},  # Back button to return to Main Menu
 ]
 
 # Add songs to the zones_music for selection
@@ -78,6 +79,34 @@ selection_threshold = 25  # Frames required to select a zone
 distance_threshold = 50  # Minimum distance to register a button hover (in pixels)
 current_song = None  # Currently playing song
 
+# Function to stop the song
+def stop_song():
+    global current_song, is_paused
+    pygame.mixer.music.stop()
+    current_song = None
+    is_paused = False
+
+
+# Function to rewind the song
+def rewind_song():
+    if current_song:
+        pygame.mixer.music.play(start=0.0)
+
+
+# Function to resume the song
+def resume_song():
+    global is_paused
+    if is_paused:
+        pygame.mixer.music.unpause()
+        is_paused = False
+
+
+# Function to pause the song
+def pause_song():
+    global is_paused
+    if pygame.mixer.music.get_busy():
+        pygame.mixer.music.pause()
+        is_paused = True
 
 # Function to find the nearest zone
 def find_nearest_zone(x, y, zones):
@@ -106,19 +135,6 @@ def play_song(song_file):
     current_song = song_file
 
 
-# Function to stop the song
-def stop_song():
-    global current_song
-    pygame.mixer.music.stop()
-    current_song = None
-
-
-# Function to rewind the song
-def rewind_song():
-    if current_song:
-        pygame.mixer.music.play(start=0.0)
-
-
 while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
@@ -134,25 +150,25 @@ while cap.isOpened():
     elif state == STATE_CALCULATOR:
         zones = zones_calculator
     elif state == STATE_CLOCK:
-        zones = zones_clock
+        zones = [{"label": "Back", "coords": (100, 400)}]
     elif state == STATE_MUSIC:
         zones = zones_music
 
     # Draw zones on the screen
     for zone in zones:
-        if zone in songs:  # Draw rectangles for songs
-            x, y = zone["coords"]
-            cv2.rectangle(frame, (x, y - 20), (x + 200, y + 20), (0, 255, 0), -1)
-            cv2.putText(frame, zone["label"], (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
-        else:  # Draw circles for other buttons
-            cv2.circle(frame, zone["coords"], 40, (255, 0, 0), 2)
-            cv2.putText(frame, zone["label"], (zone["coords"][0] - 20, zone["coords"][1] - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+        cv2.circle(frame, zone["coords"], 40, (255, 0, 0), 2)
+        cv2.putText(frame, zone["label"], (zone["coords"][0] - 20, zone["coords"][1] - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 
     # Display the current time if in clock state
     if state == STATE_CLOCK:
         current_time = datetime.now().strftime("%H:%M:%S")
         cv2.putText(frame, f"Time: {current_time}", (100, 200), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+    # Display input and output if in calculator state
+    if state == STATE_CALCULATOR:
+        cv2.putText(frame, f"Input: {current_expression}", (50, 50),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
     # Process hand landmarks and gestures
     if results.multi_hand_landmarks:
@@ -173,7 +189,7 @@ while cap.isOpened():
                     print(f"Selected: {nearest_zone}")
                     frames_on_zone = 0  # Reset the counter after selection
                     if state == STATE_MAIN_MENU:
-                        if nearest_zone == "Keyboard":
+                        if nearest_zone == "Calculator":
                             state = STATE_CALCULATOR
                         elif nearest_zone == "Clock":
                             state = STATE_CLOCK
@@ -200,11 +216,14 @@ while cap.isOpened():
                     elif state == STATE_MUSIC:
                         if nearest_zone == "Back":
                             state = STATE_MAIN_MENU
-                            stop_song()
+                            pygame.mixer.music.stop()
+                            current_song = None
                         elif nearest_zone == "Stop":
                             stop_song()
                         elif nearest_zone == "Rewind":
                             rewind_song()
+                        elif nearest_zone == "Resume":
+                            resume_song()
                         else:
                             for song in songs:
                                 if song["label"] == nearest_zone:
