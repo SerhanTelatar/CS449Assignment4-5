@@ -71,6 +71,16 @@ zones_music = [
 # Add songs to the zones_music for selection
 zones_music.extend(songs)
 
+# Volume slider properties
+slider_x = 600
+slider_y_start = 100
+slider_y_end = 400
+slider_width = 40
+volume_level = 0.5  # Default volume level (50%)
+
+# Set initial volume
+pygame.mixer.music.set_volume(volume_level)
+
 # Variables
 current_expression = ""
 last_selected_zone = None
@@ -78,14 +88,7 @@ frames_on_zone = 0
 selection_threshold = 25  # Frames required to select a zone
 distance_threshold = 50  # Minimum distance to register a button hover (in pixels)
 current_song = None  # Currently playing song
-
-# Function to stop the song
-def stop_song():
-    global current_song, is_paused
-    pygame.mixer.music.stop()
-    current_song = None
-    is_paused = False
-
+is_paused = False  # Whether the music is paused
 
 # Function to rewind the song
 def rewind_song():
@@ -99,14 +102,6 @@ def resume_song():
     if is_paused:
         pygame.mixer.music.unpause()
         is_paused = False
-
-
-# Function to pause the song
-def pause_song():
-    global is_paused
-    if pygame.mixer.music.get_busy():
-        pygame.mixer.music.pause()
-        is_paused = True
 
 # Function to find the nearest zone
 def find_nearest_zone(x, y, zones):
@@ -160,15 +155,14 @@ while cap.isOpened():
         cv2.putText(frame, zone["label"], (zone["coords"][0] - 20, zone["coords"][1] - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 
-    # Display the current time if in clock state
-    if state == STATE_CLOCK:
-        current_time = datetime.now().strftime("%H:%M:%S")
-        cv2.putText(frame, f"Time: {current_time}", (100, 200), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
-    # Display input and output if in calculator state
-    if state == STATE_CALCULATOR:
-        cv2.putText(frame, f"Input: {current_expression}", (50, 50),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    # Draw the volume slider if in music state
+    if state == STATE_MUSIC:
+        # Draw the slider background
+        cv2.rectangle(frame, (slider_x, slider_y_start), (slider_x + slider_width, slider_y_end), (200, 200, 200), -1)
+        # Draw the current volume level
+        slider_y = int(slider_y_start + (1 - volume_level) * (slider_y_end - slider_y_start))
+        cv2.rectangle(frame, (slider_x, slider_y), (slider_x + slider_width, slider_y_end), (0, 255, 0), -1)
+        cv2.putText(frame, "Volume", (slider_x - 10, slider_y_start - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
     # Process hand landmarks and gestures
     if results.multi_hand_landmarks:
@@ -179,6 +173,13 @@ while cap.isOpened():
             index_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
             index_x = int(index_tip.x * frame.shape[1])
             index_y = int(index_tip.y * frame.shape[0])
+
+            # Check if fingertip is inside the volume slider
+            if state == STATE_MUSIC and slider_x <= index_x <= slider_x + slider_width and slider_y_start <= index_y <= slider_y_end:
+                # Update the volume level based on the fingertip position
+                volume_level = 1 - (index_y - slider_y_start) / (slider_y_end - slider_y_start)
+                volume_level = max(0, min(volume_level, 1))  # Clamp the value between 0 and 1
+                pygame.mixer.music.set_volume(volume_level)
 
             # Find the nearest zone
             nearest_zone = find_nearest_zone(index_x, index_y, zones)
@@ -219,7 +220,8 @@ while cap.isOpened():
                             pygame.mixer.music.stop()
                             current_song = None
                         elif nearest_zone == "Stop":
-                            stop_song()
+                            pygame.mixer.music.stop()
+                            current_song = None
                         elif nearest_zone == "Rewind":
                             rewind_song()
                         elif nearest_zone == "Resume":
