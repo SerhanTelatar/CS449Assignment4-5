@@ -76,8 +76,8 @@ zones_calculator = [
 
 songs = [
     {"label": "FE!N", "file": "Travis Scott - FE!N (Official Music Video) ft. Playboi Carti.mp3"},
-    {"label": "Espresso", "file": "Sabrina Carpenter - Espresso.mp3"},
-    {"label": "Empire Of The Sun", "file": "Empire Of The Sun - We Are The People.mp3"},
+    {"label": "Espresso", "file": "Sabrina Carpenter - Espresso (Official Video).mp3"},
+    {"label": "Empire Of The Sun", "file": "Empire Of The Sun - We Are The People [HQ].mp3"},
     {"label": "Bye Bye Bye", "file": "Bye Bye Bye.mp3"},
     {"label": "Ocean Drive", "file": "Duke Dumont - Ocean Drive.mp3"},
     {"label": "Made in Romania", "file": "Ionut Cercel - Made in Romania.mp3"},
@@ -141,7 +141,7 @@ def find_nearest_zone(x, y, zones):
     nearest_zone = None
     for zone in zones:
         zone_x, zone_y = zone["coords"]
-        distance = np.sqrt((x - zone_x) * 2 + (y - zone_y) * 2)
+        distance = np.sqrt((x - zone_x) ** 2 + (y - zone_y) ** 2)
         if distance < min_distance:
             min_distance = distance
             nearest_zone = zone["label"]
@@ -249,7 +249,7 @@ while cap.isOpened():
             middle_x = int(middle_tip.x * frame.shape[1])
             middle_y = int(middle_tip.y * frame.shape[0])
 
-            dist = np.sqrt((index_x - middle_x)*2 + (index_y - middle_y)*2)
+            dist = np.sqrt((index_x - middle_x)**2 + (index_y - middle_y)**2)
             currently_pinch = dist < pinch_threshold
 
             if state == STATE_MUSIC:
