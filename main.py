@@ -96,10 +96,10 @@ zones_music = [
     {"label": "Back", "coords": (550, 400)},
 ]
 
-slider_x = 600
-slider_y_start = 100
-slider_y_end = 400
-slider_width = 40
+slider_y = 50
+slider_x_start = 400
+slider_x_end = 600
+slider_height = 40
 volume_level = 0.5
 pygame.mixer.music.set_volume(volume_level)
 
@@ -114,11 +114,11 @@ is_paused = False
 scroll_offset = 0
 song_box_width = 200
 song_box_height = 50
-song_start_x = 100
-song_start_y = 100
+song_start_x = 50
+song_start_y = 50
 song_vertical_spacing = 10
-scroll_bar_x = 350
-scroll_bar_width = 20
+scroll_bar_x = 300
+scroll_bar_width = 30
 scroll_area_height = 250
 max_scroll = max(0, (song_box_height + song_vertical_spacing)*len(songs) - scroll_area_height)
 
@@ -209,10 +209,11 @@ while cap.isOpened():
         for zone in zones_music:
             draw_button(frame, zone["label"], zone["coords"], hovered=False, selected=False)
 
-        cv2.rectangle(frame, (slider_x, slider_y_start), (slider_x + slider_width, slider_y_end), (200, 200, 200), -1)
-        slider_y = int(slider_y_start + (1 - volume_level) * (slider_y_end - slider_y_start))
-        cv2.rectangle(frame, (slider_x, slider_y), (slider_x + slider_width, slider_y_end), (0, 255, 0), -1)
-        cv2.putText(frame, "Volume", (slider_x - 10, slider_y_start - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        # Yatay ses slider'ı çizimi
+        cv2.rectangle(frame, (slider_x_start, slider_y), (slider_x_end, slider_y + slider_height), (200, 200, 200), -1)
+        slider_fill_x = int(slider_x_start + volume_level * (slider_x_end - slider_x_start))
+        cv2.rectangle(frame, (slider_x_start, slider_y), (slider_fill_x, slider_y + slider_height), (0, 255, 0), -1)
+        cv2.putText(frame, "Volume", (slider_x_start, slider_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
         current_y = song_start_y - scroll_offset
         song_rects = []
@@ -249,24 +250,32 @@ while cap.isOpened():
             middle_x = int(middle_tip.x * frame.shape[1])
             middle_y = int(middle_tip.y * frame.shape[0])
 
-            dist = np.sqrt((index_x - middle_x)**2 + (index_y - middle_y)**2)
+            dist = np.sqrt((index_x - middle_x)*2 + (index_y - middle_y)*2)
             currently_pinch = dist < pinch_threshold
 
+
             if state == STATE_MUSIC:
-                if slider_x <= index_x <= slider_x + slider_width and slider_y_start <= index_y <= slider_y_end:
-                    volume_level = 1 - (index_y - slider_y_start) / (slider_y_end - slider_y_start)
+
+                if slider_y <= index_y <= slider_y + slider_height and slider_x_start <= index_x <= slider_x_end:
+                    volume_level = (index_x - slider_x_start) / (slider_x_end - slider_x_start)
                     volume_level = max(0, min(volume_level, 1))
                     pygame.mixer.music.set_volume(volume_level)
 
                 if currently_pinch:
-                    if not is_pinch_active:
-                        is_pinch_active = True
-                        previous_pinch_y = index_y
+
+                    if (scroll_bar_x <= index_x <= scroll_bar_x + scroll_bar_width 
+                            and song_start_y <= index_y <= song_start_y + scroll_area_height):
+                        if not is_pinch_active:
+                            is_pinch_active = True
+                            previous_pinch_y = index_y
+                        else:
+                            delta_y = index_y - previous_pinch_y
+                            previous_pinch_y = index_y
+                            scroll_offset += delta_y
+                            scroll_offset = max(0, min(scroll_offset, max_scroll))
                     else:
-                        delta_y = index_y - previous_pinch_y
-                        previous_pinch_y = index_y
-                        scroll_offset += delta_y
-                        scroll_offset = max(0, min(scroll_offset, max_scroll))
+                        is_pinch_active = False
+                        previous_pinch_y = None
                 else:
                     is_pinch_active = False
                     previous_pinch_y = None
@@ -291,7 +300,6 @@ while cap.isOpened():
             if nearest_zone is not None:
                 overlay_image_alpha(frame, hover_img, index_x, index_y)
 
-            # Redraw hovered elements with hover effect
             if state != STATE_MUSIC:
                 for zone in zones:
                     hovered = (zone["label"] == nearest_zone)
@@ -310,17 +318,10 @@ while cap.isOpened():
                 if scroll_bar_x <= index_x <= scroll_bar_x + scroll_bar_width and song_start_y <= index_y <= song_start_y + scroll_area_height:
                     cv2.rectangle(frame, (scroll_bar_x, song_start_y), (scroll_bar_x + scroll_bar_width, song_start_y + scroll_area_height), (0,255,0), 2)
 
-            # ADDED: Draw circular timer when hovering.
-            # If we are hovering over the same zone, we increase frames_on_zone
-            # and draw a partial arc representing timer progress.
             if nearest_zone == last_selected_zone:
                 frames_on_zone += 1
-                # Draw the timer arc only if we haven't selected yet
                 if nearest_zone is not None and frames_on_zone < selection_threshold:
-                    # Calculate arc angle
                     angle = int((frames_on_zone / selection_threshold) * 360)
-                    # Find the coords of the hovered zone to draw the arc
-                    # Try to find the zone in current zones
                     hovered_coords = None
                     if state != STATE_MUSIC:
                         for zone in zones:
@@ -328,24 +329,19 @@ while cap.isOpened():
                                 hovered_coords = zone["coords"]
                                 break
                     else:
-                        # Check music controls
                         found = False
                         for zone in zones_music:
                             if zone["label"] == nearest_zone:
                                 hovered_coords = zone["coords"]
                                 found = True
                                 break
-                        # If not found in music controls, it might be a song
                         if not found and hovered_song is not None:
-                            # hover over a song; draw arc around center of the song box
                             s, rx, ry, rw, rh = hovered_song
                             hovered_coords = (rx + rw//2, ry + rh//2)
-                    
+
                     if hovered_coords is not None:
-                        # Draw the arc as a partial ellipse (circle)
-                        # We'll draw a white arc growing clockwise
                         cv2.ellipse(frame, hovered_coords, (50,50), 0, 0, angle, (255,255,255), 3)
-                    
+
                 if frames_on_zone == selection_threshold and nearest_zone is not None:
                     print(f"Selected: {nearest_zone}")
                     frames_on_zone = 0
