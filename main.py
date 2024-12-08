@@ -24,10 +24,11 @@ mp_drawing = mp.solutions.drawing_utils
 
 pygame.mixer.init()
 
-cursor_img = cv2.imread('download.png', cv2.IMREAD_UNCHANGED)
+cursor_img = cv2.imread('assets/download.png', cv2.IMREAD_UNCHANGED)
 cursor_img = cv2.resize(cursor_img, (30, 30), interpolation=cv2.INTER_AREA)
-hover_img = cv2.imread('hover.png', cv2.IMREAD_UNCHANGED)
+hover_img = cv2.imread('assets/hover.png', cv2.IMREAD_UNCHANGED)
 hover_img = cv2.resize(hover_img, (30, 30), interpolation=cv2.INTER_AREA)
+
 
 def overlay_image_alpha(img, img_overlay, x, y):
     if img_overlay is None:
@@ -56,18 +57,18 @@ STATE_MAIN_MENU = "main_menu"
 state = STATE_MAIN_MENU
 
 songs = [
-    {"label": "FE!N", "file": "Travis Scott - FE!N (Official Music Video) ft. Playboi Carti.mp3"},
-    {"label": "Espresso", "file": "Sabrina Carpenter - Espresso (Official Video).mp3"},
-    {"label": "Empire Of The Sun", "file": "Empire Of The Sun - We Are The People [HQ].mp3"},
-    {"label": "Bye Bye Bye", "file": "Bye Bye Bye.mp3"},
-    {"label": "Ocean Drive", "file": "Duke Dumont - Ocean Drive.mp3"},
-    {"label": "Made in Romania", "file": "Ionut Cercel - Made in Romania.mp3"},
-    {"label": "Stronger", "file": "Kanye West - Stronger.mp3"},
-    {"label": "League of Legends", "file": "Season 2024 Cinematic.mp3"},
-    {"label": "Softcore", "file": "The Neighbourhood - Softcore.mp3"},
-    {"label": "Clocks", "file": "@coldplay - Clocks.mp3"},
-    {"label": "Love Again", "file": "Dua Lipa - Love Again (Lyrics).mp3"},
-    {"label": "Levitating", "file": "Dua Lipa - Levitating Featuring DaBaby.mp3"},
+    {"label": "FE!N", "file": "music/Travis Scott - FE!N (Official Music Video) ft. Playboi Carti.mp3"},
+    {"label": "Espresso", "file": "music/Sabrina Carpenter - Espresso (Official Video).mp3"},
+    {"label": "Empire Of The Sun", "file": "music/Empire Of The Sun - We Are The People [HQ].mp3"},
+    {"label": "Bye Bye Bye", "file": "music/Bye Bye Bye.mp3"},
+    {"label": "Ocean Drive", "file": "music/Duke Dumont - Ocean Drive.mp3"},
+    {"label": "Made in Romania", "file": "music/Ionut Cercel - Made in Romania.mp3"},
+    {"label": "Stronger", "file": "music/Kanye West - Stronger.mp3"},
+    {"label": "League of Legends", "file": "music/Season 2024 Cinematic.mp3"},
+    {"label": "Softcore", "file": "music/The Neighbourhood - Softcore.mp3"},
+    {"label": "Clocks", "file": "music/@coldplay - Clocks.mp3"},
+    {"label": "Love Again", "file": "music/Dua Lipa - Love Again (Lyrics).mp3"},
+    {"label": "Levitating", "file": "music/Dua Lipa - Levitating Featuring DaBaby.mp3"},
 ]
 
 zones = [
