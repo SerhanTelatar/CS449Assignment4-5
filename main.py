@@ -301,14 +301,14 @@ while cap.isOpened():
                     frames_on_zone = 0
 
                     if nearest_zone == "Stop":
-                        pygame.mixer.music.stop()
-                        current_song = None
+                        pygame.mixer.music.pause()
+                        current_song = current_song  # Şarkının ismini koruyabilirsiniz, isterseniz bu satırı kaldırabilirsiniz
+                        is_paused = True
                     elif nearest_zone == "Rewind":
                         rewind_song()
                     elif nearest_zone == "Resume":
                         resume_song()
                     else:
-                       
                         for s in songs:
                             if s["label"] == nearest_zone:
                                 play_song(s["file"])
