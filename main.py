@@ -40,39 +40,9 @@ def overlay_image_alpha(img, img_overlay, x, y):
 
 cap = cv2.VideoCapture(0)
 
+
 STATE_MAIN_MENU = "main_menu"
-STATE_CALCULATOR = "calculator"
-STATE_CLOCK = "clock"
-STATE_MUSIC = "music"
 state = STATE_MAIN_MENU
-
-zones_main_menu = [
-    {"label": "Welcome", "coords": (50, 50)},
-    {"label": "Calculator", "coords": (150, 50)},
-    {"label": "Clock", "coords": (250, 50)},
-    {"label": "Music", "coords": (350, 50)},
-]
-
-zones_calculator = [
-    {"label": "7", "coords": (100, 100)},
-    {"label": "8", "coords": (200, 100)},
-    {"label": "9", "coords": (300, 100)},
-    {"label": "/", "coords": (400, 100)},
-    {"label": "4", "coords": (100, 200)},
-    {"label": "5", "coords": (200, 200)},
-    {"label": "6", "coords": (300, 200)},
-    {"label": "*", "coords": (400, 200)},
-    {"label": "1", "coords": (100, 300)},
-    {"label": "2", "coords": (200, 300)},
-    {"label": "3", "coords": (300, 300)},
-    {"label": "-", "coords": (400, 300)},
-    {"label": "Remove", "coords": (500, 300)},
-    {"label": "Clear", "coords": (500, 400)},
-    {"label": "0", "coords": (200, 400)},
-    {"label": "+", "coords": (300, 400)},
-    {"label": "=", "coords": (400, 400)},
-    {"label": "Back", "coords": (100, 400)},
-]
 
 songs = [
     {"label": "FE!N", "file": "Travis Scott - FE!N (Official Music Video) ft. Playboi Carti.mp3"},
@@ -89,7 +59,7 @@ songs = [
     {"label": "Levitating", "file": "Dua Lipa - Levitating Featuring DaBaby.mp3"},
 ]
 
-zones_music = [
+zones = [
     {"label": "Stop", "coords": (100, 400)},
     {"label": "Rewind", "coords": (250, 400)},
     {"label": "Resume", "coords": (400, 400)},
@@ -103,7 +73,6 @@ slider_height = 40
 volume_level = 0.5
 pygame.mixer.music.set_volume(volume_level)
 
-current_expression = ""
 last_selected_zone = None
 frames_on_zone = 0
 selection_threshold = 25
@@ -193,48 +162,37 @@ while cap.isOpened():
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = hands.process(frame_rgb)
 
-    if state == STATE_MAIN_MENU:
-        zones = zones_main_menu
-    elif state == STATE_CALCULATOR:
-        zones = zones_calculator
-    elif state == STATE_CLOCK:
-        zones = [{"label": "Back", "coords": (100, 400)}]
-    elif state == STATE_MUSIC:
-        zones = zones_music
+  
+    for zone in zones:
+        draw_button(frame, zone["label"], zone["coords"], hovered=False, selected=False)
 
-    if state != STATE_MUSIC:
-        for zone in zones:
-            draw_button(frame, zone["label"], zone["coords"], hovered=False, selected=False)
+    
+    cv2.rectangle(frame, (slider_x_start, slider_y), (slider_x_end, slider_y + slider_height), (200, 200, 200), -1)
+    slider_fill_x = int(slider_x_start + volume_level * (slider_x_end - slider_x_start))
+    cv2.rectangle(frame, (slider_x_start, slider_y), (slider_fill_x, slider_y + slider_height), (0, 255, 0), -1)
+    cv2.putText(frame, "Volume", (slider_x_start, slider_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+    current_y = song_start_y - scroll_offset
+    song_rects = []
+    for i, song in enumerate(songs):
+        rx = song_start_x
+        ry = current_y
+        rw = song_box_width
+        rh = song_box_height
+        if ry + rh > song_start_y and ry < song_start_y + scroll_area_height:
+            draw_song_item(frame, song, rx, ry, rw, rh, hovered=False)
+            song_rects.append((song, rx, ry, rw, rh))
+        current_y += (song_box_height + song_vertical_spacing)
+
+    if max_scroll > 0:
+        scroll_ratio = scroll_area_height / ((song_box_height+song_vertical_spacing)*len(songs))
     else:
-        for zone in zones_music:
-            draw_button(frame, zone["label"], zone["coords"], hovered=False, selected=False)
+        scroll_ratio = 1
+    scroll_bar_height = int(scroll_area_height * scroll_ratio)
+    scroll_pos = int((scroll_offset / max_scroll) * (scroll_area_height - scroll_bar_height)) if max_scroll > 0 else 0
+    cv2.rectangle(frame, (scroll_bar_x, song_start_y), (scroll_bar_x + scroll_bar_width, song_start_y + scroll_area_height), (180,180,180), -1)
+    cv2.rectangle(frame, (scroll_bar_x, song_start_y + scroll_pos), (scroll_bar_x + scroll_bar_width, song_start_y + scroll_pos + scroll_bar_height), (50,50,50), -1)
 
-        # Yatay ses slider'ı çizimi
-        cv2.rectangle(frame, (slider_x_start, slider_y), (slider_x_end, slider_y + slider_height), (200, 200, 200), -1)
-        slider_fill_x = int(slider_x_start + volume_level * (slider_x_end - slider_x_start))
-        cv2.rectangle(frame, (slider_x_start, slider_y), (slider_fill_x, slider_y + slider_height), (0, 255, 0), -1)
-        cv2.putText(frame, "Volume", (slider_x_start, slider_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-        current_y = song_start_y - scroll_offset
-        song_rects = []
-        for i, song in enumerate(songs):
-            rx = song_start_x
-            ry = current_y
-            rw = song_box_width
-            rh = song_box_height
-            if ry + rh > song_start_y and ry < song_start_y + scroll_area_height:
-                draw_song_item(frame, song, rx, ry, rw, rh, hovered=False)
-                song_rects.append((song, rx, ry, rw, rh))
-            current_y += (song_box_height + song_vertical_spacing)
-
-        if max_scroll > 0:
-            scroll_ratio = scroll_area_height / ((song_box_height+song_vertical_spacing)*len(songs))
-        else:
-            scroll_ratio = 1
-        scroll_bar_height = int(scroll_area_height * scroll_ratio)
-        scroll_pos = int((scroll_offset / max_scroll) * (scroll_area_height - scroll_bar_height)) if max_scroll > 0 else 0
-        cv2.rectangle(frame, (scroll_bar_x, song_start_y), (scroll_bar_x + scroll_bar_width, song_start_y + scroll_area_height), (180,180,180), -1)
-        cv2.rectangle(frame, (scroll_bar_x, song_start_y + scroll_pos), (scroll_bar_x + scroll_bar_width, song_start_y + scroll_pos + scroll_bar_height), (50,50,50), -1)
 
     if results.multi_hand_landmarks:
         for hand_landmarks in results.multi_hand_landmarks:
@@ -253,91 +211,76 @@ while cap.isOpened():
             dist = np.sqrt((index_x - middle_x)*2 + (index_y - middle_y)*2)
             currently_pinch = dist < pinch_threshold
 
+            
+            if slider_y <= index_y <= slider_y + slider_height and slider_x_start <= index_x <= slider_x_end:
+                volume_level = (index_x - slider_x_start) / (slider_x_end - slider_x_start)
+                volume_level = max(0, min(volume_level, 1))
+                pygame.mixer.music.set_volume(volume_level)
 
-            if state == STATE_MUSIC:
-
-                if slider_y <= index_y <= slider_y + slider_height and slider_x_start <= index_x <= slider_x_end:
-                    volume_level = (index_x - slider_x_start) / (slider_x_end - slider_x_start)
-                    volume_level = max(0, min(volume_level, 1))
-                    pygame.mixer.music.set_volume(volume_level)
-
-                if currently_pinch:
-
-                    if (scroll_bar_x <= index_x <= scroll_bar_x + scroll_bar_width 
-                            and song_start_y <= index_y <= song_start_y + scroll_area_height):
-                        if not is_pinch_active:
-                            is_pinch_active = True
-                            previous_pinch_y = index_y
-                        else:
-                            delta_y = index_y - previous_pinch_y
-                            previous_pinch_y = index_y
-                            scroll_offset += delta_y
-                            scroll_offset = max(0, min(scroll_offset, max_scroll))
+            
+            if currently_pinch:
+                if (scroll_bar_x <= index_x <= scroll_bar_x + scroll_bar_width 
+                        and song_start_y <= index_y <= song_start_y + scroll_area_height):
+                    if not is_pinch_active:
+                        is_pinch_active = True
+                        previous_pinch_y = index_y
                     else:
-                        is_pinch_active = False
-                        previous_pinch_y = None
+                        delta_y = index_y - previous_pinch_y
+                        previous_pinch_y = index_y
+                        scroll_offset += delta_y
+                        scroll_offset = max(0, min(scroll_offset, max_scroll))
                 else:
                     is_pinch_active = False
                     previous_pinch_y = None
-
-            if state != STATE_MUSIC:
-                nearest_zone = find_nearest_zone(index_x, index_y, zones)
             else:
-                circle_zone = find_nearest_zone(index_x, index_y, zones_music)
-                rect_zone = None
-                hovered_song = None
-                if state == STATE_MUSIC and 'song_rects' in locals():
-                    for s, rx, ry, rw, rh in song_rects:
-                        if is_point_in_rect(index_x, index_y, rx, ry, rw, rh):
-                            rect_zone = s["label"]
-                            hovered_song = (s, rx, ry, rw, rh)
-                            break
-                if rect_zone is not None:
-                    nearest_zone = rect_zone
-                else:
-                    nearest_zone = circle_zone
+                is_pinch_active = False
+                previous_pinch_y = None
+
+          
+            circle_zone = find_nearest_zone(index_x, index_y, zones)
+            rect_zone = None
+            hovered_song = None
+            for s, rx, ry, rw, rh in song_rects:
+                if is_point_in_rect(index_x, index_y, rx, ry, rw, rh):
+                    rect_zone = s["label"]
+                    hovered_song = (s, rx, ry, rw, rh)
+                    break
+
+            if rect_zone is not None:
+                nearest_zone = rect_zone
+            else:
+                nearest_zone = circle_zone
 
             if nearest_zone is not None:
                 overlay_image_alpha(frame, hover_img, index_x, index_y)
 
-            if state != STATE_MUSIC:
-                for zone in zones:
-                    hovered = (zone["label"] == nearest_zone)
-                    selected = (zone["label"] == last_selected_zone and frames_on_zone >= selection_threshold)
-                    draw_button(frame, zone["label"], zone["coords"], hovered=hovered, selected=selected)
-            else:
-                for zone in zones_music:
-                    hovered = (zone["label"] == nearest_zone)
-                    selected = (zone["label"] == last_selected_zone and frames_on_zone >= selection_threshold)
-                    draw_button(frame, zone["label"], zone["coords"], hovered=hovered, selected=selected)
+           
+            for zone in zones:
+                hovered = (zone["label"] == nearest_zone)
+                selected = (zone["label"] == last_selected_zone and frames_on_zone >= selection_threshold)
+                draw_button(frame, zone["label"], zone["coords"], hovered=hovered, selected=selected)
 
-                for s, rx, ry, rw, rh in song_rects:
-                    hovered = (s["label"] == nearest_zone)
-                    draw_song_item(frame, s, rx, ry, rw, rh, hovered=hovered)
+            for s, rx, ry, rw, rh in song_rects:
+                hovered = (s["label"] == nearest_zone)
+                draw_song_item(frame, s, rx, ry, rw, rh, hovered=hovered)
 
-                if scroll_bar_x <= index_x <= scroll_bar_x + scroll_bar_width and song_start_y <= index_y <= song_start_y + scroll_area_height:
-                    cv2.rectangle(frame, (scroll_bar_x, song_start_y), (scroll_bar_x + scroll_bar_width, song_start_y + scroll_area_height), (0,255,0), 2)
+            if scroll_bar_x <= index_x <= scroll_bar_x + scroll_bar_width and song_start_y <= index_y <= song_start_y + scroll_area_height:
+                cv2.rectangle(frame, (scroll_bar_x, song_start_y), (scroll_bar_x + scroll_bar_width, song_start_y + scroll_area_height), (0,255,0), 2)
 
             if nearest_zone == last_selected_zone:
                 frames_on_zone += 1
                 if nearest_zone is not None and frames_on_zone < selection_threshold:
                     angle = int((frames_on_zone / selection_threshold) * 360)
                     hovered_coords = None
-                    if state != STATE_MUSIC:
+                  
+                    if hovered_song is not None:
+                        s, rx, ry, rw, rh = hovered_song
+                        hovered_coords = (rx + rw//2, ry + rh//2)
+                    else:
                         for zone in zones:
                             if zone["label"] == nearest_zone:
                                 hovered_coords = zone["coords"]
                                 break
-                    else:
-                        found = False
-                        for zone in zones_music:
-                            if zone["label"] == nearest_zone:
-                                hovered_coords = zone["coords"]
-                                found = True
-                                break
-                        if not found and hovered_song is not None:
-                            s, rx, ry, rw, rh = hovered_song
-                            hovered_coords = (rx + rw//2, ry + rh//2)
 
                     if hovered_coords is not None:
                         cv2.ellipse(frame, hovered_coords, (50,50), 0, 0, angle, (255,255,255), 3)
@@ -345,60 +288,26 @@ while cap.isOpened():
                 if frames_on_zone == selection_threshold and nearest_zone is not None:
                     print(f"Selected: {nearest_zone}")
                     frames_on_zone = 0
-                    if state == STATE_MAIN_MENU:
-                        if nearest_zone == "Calculator":
-                            state = STATE_CALCULATOR
-                        elif nearest_zone == "Clock":
-                            state = STATE_CLOCK
-                        elif nearest_zone == "Music":
-                            state = STATE_MUSIC
-                    elif state == STATE_CALCULATOR:
-                        if nearest_zone == "Back":
-                            state = STATE_MAIN_MENU
-                            current_expression = ""
-                        elif nearest_zone == "Clear":
-                            current_expression = ""
-                        elif nearest_zone == "Remove":
-                            current_expression = current_expression[:-1]
-                        elif nearest_zone == "=":
-                            try:
-                                current_expression = str(eval(current_expression))
-                            except Exception:
-                                current_expression = "Error"
-                        else:
-                            current_expression += nearest_zone
-                    elif state == STATE_CLOCK:
-                        if nearest_zone == "Back":
-                            state = STATE_MAIN_MENU
-                    elif state == STATE_MUSIC:
-                        if nearest_zone == "Back":
-                            state = STATE_MAIN_MENU
-                            pygame.mixer.music.stop()
-                            current_song = None
-                        elif nearest_zone == "Stop":
-                            pygame.mixer.music.stop()
-                            current_song = None
-                        elif nearest_zone == "Rewind":
-                            rewind_song()
-                        elif nearest_zone == "Resume":
-                            resume_song()
-                        else:
-                            for s in songs:
-                                if s["label"] == nearest_zone:
-                                    play_song(s["file"])
-                                    break
+
+                    if nearest_zone == "Stop":
+                        pygame.mixer.music.stop()
+                        current_song = None
+                    elif nearest_zone == "Rewind":
+                        rewind_song()
+                    elif nearest_zone == "Resume":
+                        resume_song()
+                    else:
+                       
+                        for s in songs:
+                            if s["label"] == nearest_zone:
+                                play_song(s["file"])
+                                break
+
             else:
                 last_selected_zone = nearest_zone
                 frames_on_zone = 1
 
-    if state == STATE_CALCULATOR:
-        cv2.putText(frame, current_expression, (100, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
-    if state == STATE_CLOCK:
-        now = datetime.now().strftime("%H:%M:%S")
-        cv2.putText(frame, now, (200, 200), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 2)
-
-    if state == STATE_MUSIC:
-        cv2.rectangle(frame, (song_start_x-10, song_start_y), (song_start_x+song_box_width+10, song_start_y+scroll_area_height), (255,255,255), 1)
+    cv2.rectangle(frame, (song_start_x-10, song_start_y), (song_start_x+song_box_width+10, song_start_y+scroll_area_height), (255,255,255), 1)
 
     cv2.imshow('Hand Detection with Zones', frame)
 
