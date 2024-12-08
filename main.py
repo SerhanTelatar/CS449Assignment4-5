@@ -74,7 +74,6 @@ zones = [
     {"label": "Stop", "coords": (100, 400)},
     {"label": "Rewind", "coords": (250, 400)},
     {"label": "Resume", "coords": (400, 400)},
-    {"label": "Back", "coords": (550, 400)},
 ]
 
 slider_y = 50
