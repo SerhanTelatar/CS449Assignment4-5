@@ -1,3 +1,14 @@
+'''
+Assignment 5
+
+Serhan Telatar
+Timur Can Turut
+Ahmet Serdar Demircan
+Ayberk Kara
+
+'''
+
+
 import cv2
 import mediapipe as mp
 import numpy as np
